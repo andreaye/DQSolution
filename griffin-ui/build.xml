@@ -5,15 +5,17 @@
 	</formats>
 	<fileSets>
 		<fileSet>
-			<directory>${project.basedir}</directory><!--
+			<directory>${project.basedir}/dist/</directory>
+			<outputDirectory>/</outputDirectory>
+<!--
 			<includes>
 
 				<include>apidocs/**</include>
 				<include>bower_components/**</include>
-			
+
 				<include>**/**</include>
 			</includes>
-			-->	
+			-->
 			<excludes>
 				<exclude>**/node_modules/**</exclude>
 				<exclude>**/tests/**</exclude>

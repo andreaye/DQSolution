@@ -48,6 +48,8 @@ import org.springframework.stereotype.Service;
 
 
 
+
+
 import com.ebay.oss.griffin.common.Pair;
 import com.ebay.oss.griffin.common.ScheduleModelSeperator;
 import com.ebay.oss.griffin.domain.DataAsset;
@@ -120,8 +122,10 @@ public class DqScheduleServiceImpl implements DqScheduleService {
 
     void createJobToRunBySchedule() {
         for (DqSchedule schedule : scheduleRepo.getAll()) {
+        	logger.warn( "===================start to update schedule:"+schedule.getModelList());
             long now = new Date().getTime();
             long startTime = schedule.getStarttime();
+            logger.warn( "===================now:"+now+" starttime:"+startTime);
             if (now < startTime) {
                 continue;
             }
@@ -131,19 +135,27 @@ public class DqScheduleServiceImpl implements DqScheduleService {
             c.setTime(date);
             int type = schedule.getScheduleType();
             if (type == ScheduleType.DAILY) {
+            	logger.warn( "===================daily type:"+type);
                 c.add(Calendar.DATE, 1);
             } else if (type == ScheduleType.HOURLY) {
+            	logger.warn( "===================hourly type:"+type);
                 c.add(Calendar.HOUR, 1);
             } else if (type == ScheduleType.WEEKLY) {
+            	logger.warn( "===================weekly type:"+type);
                 c.add(Calendar.DATE, 7);
             } else if (type == ScheduleType.MONTHLY) {
+            	logger.warn( "===================month type:"+type);
                 c.add(Calendar.MONTH, 1);
             } else {
+            	logger.warn( "===================no type:"+type);
                 continue;
             }
+            
+            logger.warn( "===================update schedule.");
             startTime = c.getTime().getTime();
             schedule.setStarttime(startTime);
 
+            logger.warn( "===================new job:"+schedule.getModelList()+" "+startTime);
             DqJob job = new DqJob();
             job.setModelList(schedule.getModelList());
             job.setStarttime(startTime);
@@ -156,8 +168,9 @@ public class DqScheduleServiceImpl implements DqScheduleService {
                 continue;
             }
 
+            
             scheduleRepo.save(schedule);
-
+            logger.warn( "===================update schedule done.");
         }
 	}
 
@@ -368,31 +381,60 @@ public class DqScheduleServiceImpl implements DqScheduleService {
 				bw2.close();
 
 				logger.info("====================create file done");
-
+				int result = 1;
+				int retrycount = 0;
 				if(environment.equals("prod")) {
 					String hdfs = env.getProperty("job.hdfs.folder")+"/"+env.getProperty("job.hdfs.runningfoldername");
-					Process process1 = Runtime.getRuntime().exec("hadoop fs -mkdir "+hdfs+File.separator+jobid);
-					logger.info("====================hadoop fs -mkdir "+hdfs+File.separator+jobid);
-					process1.waitFor();;
-					Process process2 = Runtime.getRuntime().exec("hadoop fs -put "+dir+" "+hdfs+File.separator+jobid+File.separator);
-					logger.info( "====================hadoop fs -put "+dir+" "+hdfs+File.separator+jobid+File.separator);
-					process2.waitFor();
-					Process process2_1 = Runtime.getRuntime().exec("hadoop fs -put "+dir2+" "+hdfs+File.separator+jobid+File.separator+"_watchfile");
-					logger.info("====================hadoop fs -put "+dir2+" "+hdfs+File.separator+jobid+File.separator+"_watchfile");
-					process2_1.waitFor();
-					Process process3 = Runtime.getRuntime().exec("hadoop fs -touchz "+hdfs+File.separator+jobid+File.separator+"_type_"+jobtype+".done");
-					logger.info( "====================hadoop fs -touchz "+hdfs+File.separator+jobid+File.separator+"_type_"+jobtype+".done");
-					process3.waitFor();
+					result = 1;
+					retrycount = 0;
+					while(result != 0 && retrycount<5)
+					{
+						Process process1 = Runtime.getRuntime().exec("hadoop fs -mkdir "+hdfs+File.separator+jobid);
+						logger.warn("====================hadoop fs -mkdir "+hdfs+File.separator+jobid);
+						result = process1.waitFor();
+						retrycount++;
+						logger.warn( "====================result: "+result+" retry time: "+retrycount);
+					}
+					result = 1;
+					retrycount = 0;
+					while(result != 0 && retrycount<5)
+					{
+						Process process2 = Runtime.getRuntime().exec("hadoop fs -put "+dir+" "+hdfs+File.separator+jobid+File.separator);
+						logger.warn( "====================hadoop fs -put "+dir+" "+hdfs+File.separator+jobid+File.separator);
+						result = process2.waitFor();
+						retrycount++;
+						logger.warn( "====================result: "+result+" retry time: "+retrycount);
+					}
+					result = 1;
+					retrycount = 0;
+					while(result != 0 && retrycount<5)
+					{
+						Process process2_1 = Runtime.getRuntime().exec("hadoop fs -put "+dir2+" "+hdfs+File.separator+jobid+File.separator+"_watchfile");
+						logger.warn("====================hadoop fs -put "+dir2+" "+hdfs+File.separator+jobid+File.separator+"_watchfile");
+						result = process2_1.waitFor();
+						retrycount++;
+						logger.warn( "====================result: "+result+" retry time: "+retrycount);
+					}
+					result = 1;
+					retrycount = 0;
+					while(result != 0 && retrycount<5)
+					{
+						Process process3 = Runtime.getRuntime().exec("hadoop fs -touchz "+hdfs+File.separator+jobid+File.separator+"_type_"+jobtype+".done");
+						logger.warn( "====================hadoop fs -touchz "+hdfs+File.separator+jobid+File.separator+"_type_"+jobtype+".done");
+						result = process3.waitFor();
+						retrycount++;
+						logger.warn( "====================result: "+result+" retry time: "+retrycount);
+					}
 
 				}
 
 				//file.delete();
 				new File(env.getProperty("job.local.folder")+File.separator+jobid).delete();
-				logger.info( "====================delete file done");
+				logger.warn( "====================delete file done");
 
 				eachJob.setStatus(JobStatus.WAITING);
 				jobRepo.update(eachJob);
-				logger.info("====================udpate status done");
+				logger.warn("====================udpate status done");
 			}
 
 
@@ -625,7 +667,7 @@ public class DqScheduleServiceImpl implements DqScheduleService {
 			}
 
 
-
+			logger.warn("====================check jobs done");
 		} catch (Exception e) {
 			logger.warn(e.toString(), e);
 		}

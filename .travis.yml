@@ -1,6 +1,12 @@
 language: java
+install:
+  - . $HOME/.nvm/nvm.sh
+  - nvm install stable
+  - nvm use stable
+  - npm install -g requirejs
 script:
-  - mvn clean deploy --settings travis-settings.xml
+  - r.js -o griffin-ui/build.js
+  - mvn clean deploy --quiet --settings travis-settings.xml
 after_success:
   - mvn clean cobertura:cobertura coveralls:report
 jdk:
